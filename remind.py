@@ -4,57 +4,76 @@ from datetime import datetime, timedelta
 
 # ----------------------------------------------------------------------------
 # constants
-TIME_UNITS = {
-    "s": 1,
-    "sec": 1,
-    "secs": 1,
-    "second": 1,
-    "seconds": 1,
+SECONDS = ["s", "sec", "secs", "second", "seconds"]
+MINUTES = ["m", "min", "mins", "minute", "minutes"]
+HOURS   = ["h", "hr",  "hrs",  "hour",   "hours"]
+DAYS    = ["d", "day", "days"]
+WEEKS   = ["w", "wk",  "wks",  "week",   "weeks"]
 
-    "m": 60,
-    "min": 60,
-    "mins": 60,
-    "minute": 60,
-    "minutes": 60,
-
-    "h": 3600,
-    "hr": 3600,
-    "hrs": 3600,
-    "hour": 3600,
-    "hours": 3600
-}
+TIME_UNITS = [
+        "s", "sec", "secs", "second", "seconds",
+        "m", "min", "mins", "minute", "minutes",
+        "h", "hr",  "hrs",  "hour",   "hours",
+        "d", "day", "days",
+        "w", "wk",  "wks",  "week",   "weeks"
+]
 
 # ----------------------------------------------------------------------------
-# usage: /remindafter <time> <message>
+# helper function for adding time to a datetime
+def addtime(time: datetime, amount: int, unit: str) -> datetime:
+    t = time
+    if unit in SECONDS:
+        t += timedelta(seconds=amount)
+    elif unit in MINUTES:
+        t += timedelta(minutes=amount)
+    elif unit in HOURS:
+        t += timedelta(hours=amount)
+    elif unit in DAYS:
+        t += timedelta(days=amount)
+    elif unit in WEEKS:
+        t += timedelta(weeks=amount)
+    return t
+
+# ----------------------------------------------------------------------------
+# helper function for adding time to an interval, used by remindevery
+def addinterval(interval: list, amount: int, unit: str) -> list:
+    i = interval[:]
+    if unit in SECONDS:
+        i[4] += amount
+    elif unit in MINUTES:
+        i[3] += amount
+    elif unit in HOURS:
+        i[2] += amount
+    elif unit in DAYS:
+        i[1] += amount
+    elif unit in WEEKS:
+        i[0] += amount
+    return i
+
+# ----------------------------------------------------------------------------
+# usage: /remindafter <time>
 # <time> can be in short format ('10s') or long format ('10 sec' or '10 seconds')
 #
-# returns the amount of seconds needed to sleep and the reminder message.
-# returns [-1, <error message>] on error.
-def remindafter(name: str, query: str) -> list:
+# returns a datetime object at which the reminder should fire.
+# raises ValueError on error.
+def remindafter(cmdname: str, query: str) -> datetime:
     if not query:
-        return [-1, f"usage: {name} <time> <message>"]
+        raise ValueError(f"usage: {cmdname} <time>")
     args = query.split()
-    if len(args) < 2:
-        return [-1, f"usage: {name} <time> <message>"]
-    elif len(args) == 2 or (len(args) > 2 and args[1] not in TIME_UNITS):
+    now = datetime.now()
+    if len(args) < 1 or len(args) > 2:
+        raise ValueError(f"usage: {cmdname} <time>")
+    elif len(args) == 1 or (len(args) > 1 and args[1] not in TIME_UNITS):
         if args[0][:-1].isdigit() and args[0][-1] in TIME_UNITS:
-            try:
-                tm = int(args[0][:-1]) * TIME_UNITS[args[0][-1]]
-            except ValueError:
-                return [-1, "error: invalid time format"]
-            msg = ' '.join(args[1:])
+            now = addtime(now, int(args[0][:-1]), args[0][-1])
         else:
-            return [-1, "error: invalid time format"]
-    elif len(args) >= 3:
-        if args[0].isdigit():
-            try:
-                tm = int(args[0]) * TIME_UNITS[args[1]]
-            except ValueError:
-                return [-1, "error: invalid time format"]
-            msg = ' '.join(args[2:])
+            raise ValueError("error: invalid time format")
+    elif len(args) == 2:
+        if args[0].isdigit() and args[1] in TIME_UNITS:
+            now = addtime(now, int(args[0]), args[1])
         else:
-            return [-1, "error: invalid time format"]
-    return [tm, msg]
+            raise ValueError("error: invalid time format")
+    return now
 
 # ----------------------------------------------------------------------------
 # helper functions for remindat
@@ -75,7 +94,7 @@ def parsetime(time: list) -> list:
         return [int(time[0])]
 
 # ----------------------------------------------------------------------------
-# usage: /remindat <time> <message>
+# usage: /remindat <time>
 # <time> has to be in the following format:
 # [year]/[month]/[day] [hour]:[minute]:[second]
 # or this format:
@@ -88,14 +107,14 @@ def parsetime(time: list) -> list:
 # at 6:30 PM on August 15 of this year, '08/15' will remind you on
 # August 15 at the same time as right now.
 #
-# returns the amount of seconds needed to sleep and the reminder message.
-# returns [-1, <error message>] on error.
-def remindat(name: str, query: str) -> list:
+# returns a datetime object at which the reminder should fire.
+# raises ValueError on error.
+def remindat(cmdname: str, query: str) -> datetime:
     if not query:
-        return [-1, f"usage: {name} <time> <message>"]
+        raise ValueError(f"usage: {cmdname} <time>")
     args = query.split()
-    if len(args) < 2:
-        return [-1, f"usage: {name} <time> <message>"]
+    if len(args) < 1 or len(args) > 2:
+        raise ValueError(f"usage: {cmdname} <time>")
     now = datetime.now()
     year, month, day = now.year, now.month, now.day
     hour, minute, second = now.hour, now.minute, now.second
@@ -109,25 +128,58 @@ def remindat(name: str, query: str) -> list:
             seentime = True
             hour, minute, second = parsetime(args[0].split(":"))
         else:
-            return [-1, "error: invalid time format"]
+            raise ValueError("error: invalid time format")
 
-        if len(args) > 2:
-            msg = args[2]
+        if len(args) > 1:
             if not seendate and "/" in args[1] and ":" not in args[1]:
+                seendate = True
                 year, month, day = parsedate(args[1].split("/"))
             elif not seentime and ":" in args[1] and "/" not in args[1]:
+                seentime = True
                 hour, minute, second = parsetime(args[1].split(":"))
             else:
-                return [-1, "error: invalid time format"]
-        else:
-            msg = args[1]
+                raise ValueError("error: invalid time format")
     except ValueError:
-        return [-1, "error: invalid time format"]
+        # TODO: wtf is this
+        raise ValueError("error: invalid time format")
 
+    now = datetime.now()
+    if not seendate:
+        year, month, day = now.year, now.month, now.day
+    if not seentime:
+        hour, minute, second = now.hour, now.minute, now.second
     newtime = datetime(year, month, day, hour, minute, second)
-    currtime = datetime.now()
-    timedelta = newtime - currtime;
+
+    # sanity check
+    timedelta = newtime - now;
     diff = (timedelta.days * 24 * 3600) + timedelta.seconds
     if diff < 0:
-        return [-1, "error: date/time cannot be in the past"]
-    return [diff, msg]
+        raise ValueError("error: date/time cannot be in the past")
+
+    return newtime
+
+# ----------------------------------------------------------------------------
+# usage: /remindevery <time>
+# similar to /remindafter, but reminds at an interval, e.g '/remindevery 10s'
+# will remind you every 10 seconds.
+#
+# returns a list in the format of [weeks, days, hours, minutes, seconds].
+# raises ValueError on error.
+def remindevery(cmdname: str, query: str) -> list:
+    if not query:
+        raise ValueError(f"usage: {cmdname} <time>")
+    args = query.split()
+    interval = [0, 0, 0, 0, 0]
+    if len(args) < 1 or len(args) > 2:
+        raise ValueError(f"usage: {cmdname} <time>")
+    elif len(args) == 1 or (len(args) > 1 and args[1] not in TIME_UNITS):
+        if args[0][:-1].isdigit() and args[0][-1] in TIME_UNITS:
+            interval = addinterval(interval, int(args[0][:-1]), args[0][-1])
+        else:
+            raise ValueError("error: invalid time format")
+    elif len(args) == 2:
+        if args[0].isdigit() and args[1] in TIME_UNITS:
+            interval = addinterval(interval, int(args[0]), args[1])
+        else:
+            raise ValueError("error: invalid time format")
+    return interval
