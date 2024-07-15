@@ -56,7 +56,7 @@ def cmd_list():
 # ----------------------------------------------------------------------------
 # the remove command, used to remove an active reminder
 # aliases: /r /rm /remove
-def cmd_remove(cmdname: str, query: str):
+def cmd_remove(query: str, cmdname: str):
     if not query:
         print(f"usage: {cmdname} <reminder ID>")
         return
@@ -68,9 +68,9 @@ def cmd_remove(cmdname: str, query: str):
 # ----------------------------------------------------------------------------
 # the remindafter command
 # aliases: /ra /remind /remindafter
-def cmd_remindafter(cmdname: str, query: str):
+def cmd_remindafter(query: str, cmdname: str):
     try:
-        reminder_time = remind.remindafter(cmdname, query)
+        reminder_time = remind.remindafter(query, cmdname)
     except ValueError as e:
         print(e)
         return
@@ -86,9 +86,9 @@ def cmd_remindafter(cmdname: str, query: str):
 # ----------------------------------------------------------------------------
 # the remindat command
 # aliases: /rt /remindat
-def cmd_remindat(cmdname: str, query: str):
+def cmd_remindat(query: str, cmdname: str):
     try:
-        reminder_time = remind.remindat(cmdname, query)
+        reminder_time = remind.remindat(query, cmdname)
     except ValueError as e:
         print(e)
         return
@@ -122,9 +122,9 @@ def intervalstr(interval: list) -> str:
         s += f"{interval[4]} seconds, "
     return s[:-2]
 
-def cmd_remindevery(cmdname: str, query: str):
+def cmd_remindevery(query: str, cmdname: str):
     try:
-        iv = remind.remindevery(cmdname, query)
+        iv = remind.remindevery(query, cmdname)
     except ValueError as e:
         print(e)
         return
@@ -151,13 +151,13 @@ def main():
             elif cmd[0] in ["/l", "/ls", "/list"]:
                 cmd_list()
             elif cmd[0] in ["/r", "/rm", "/remove"]:
-                cmd_remove(cmd[0], cmd[1])
+                cmd_remove(cmd[1], cmd[0])
             elif cmd[0] in ["/ra", "/remind", "/remindafter"]:
-                cmd_remindafter(cmd[0], cmd[1])
+                cmd_remindafter(cmd[1], cmd[0])
             elif cmd[0] in ["/rt", "/remindat"]:
-                cmd_remindat(cmd[0], cmd[1])
+                cmd_remindat(cmd[1], cmd[0])
             elif cmd[0] in ["/re", "/remindevery"]:
-                cmd_remindevery(cmd[0], cmd[1])
+                cmd_remindevery(cmd[1], cmd[0])
             else:
                 print("error: unknown command")
     except (EOFError, KeyboardInterrupt):

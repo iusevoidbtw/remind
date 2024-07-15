@@ -96,7 +96,7 @@ async def cmd_remindafter(message: types.Message, command: CommandObject):
     global reminder_type, waiting_for_prompt
     try:
         global reminder_time
-        reminder_time = remind.remindafter(message.text.split()[0], command.args)
+        reminder_time = remind.remindafter(command.args, message.text.split()[0])
     except ValueError as e:
         await message.answer(e)
         return
@@ -113,7 +113,7 @@ async def cmd_remindat(message: types.Message, command: CommandObject):
     global reminder_type, waiting_for_prompt
     try:
         global reminder_time
-        reminder_time = remind.remindat(message.text.split()[0], command.args)
+        reminder_time = remind.remindat(command.args, message.text.split()[0])
     except ValueError as e:
         await message.answer(e)
         return
@@ -144,7 +144,7 @@ def intervalstr(interval: list) -> str:
 @dp.message(Command(commands=["re", "remindevery"]))
 async def cmd_remindevery(message: types.Message, command: CommandObject):
     try:
-        iv = remind.remindevery(message.text.split()[0], command.args)
+        iv = remind.remindevery(command.args, message.text.split()[0])
     except ValueError as e:
         await message.answer(e)
         return

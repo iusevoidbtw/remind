@@ -51,12 +51,12 @@ def addinterval(interval: list, amount: int, unit: str) -> list:
     return i
 
 # ----------------------------------------------------------------------------
-# usage: /remindafter <time>
+# usage: remindafter <time>
 # <time> can be in short format ('10s') or long format ('10 sec' or '10 seconds')
 #
 # returns a datetime object at which the reminder should fire.
 # raises ValueError on error.
-def remindafter(cmdname: str, query: str) -> datetime:
+def remindafter(query: str, cmdname: str = "remindafter") -> datetime:
     if not query:
         raise ValueError(f"usage: {cmdname} <time>")
     args = query.split()
@@ -94,7 +94,7 @@ def parsetime(time: list) -> list:
         return [int(time[0])]
 
 # ----------------------------------------------------------------------------
-# usage: /remindat <time>
+# usage: remindat <time>
 # <time> has to be in the following format:
 # [year]/[month]/[day] [hour]:[minute]:[second]
 # or this format:
@@ -109,7 +109,7 @@ def parsetime(time: list) -> list:
 #
 # returns a datetime object at which the reminder should fire.
 # raises ValueError on error.
-def remindat(cmdname: str, query: str) -> datetime:
+def remindat(query: str, cmdname: str = "remindat") -> datetime:
     if not query:
         raise ValueError(f"usage: {cmdname} <time>")
     args = query.split()
@@ -159,13 +159,13 @@ def remindat(cmdname: str, query: str) -> datetime:
     return newtime
 
 # ----------------------------------------------------------------------------
-# usage: /remindevery <time>
-# similar to /remindafter, but reminds at an interval, e.g '/remindevery 10s'
+# usage: remindevery <time>
+# similar to remindafter, but reminds at an interval, e.g 'remindevery 10s'
 # will remind you every 10 seconds.
 #
 # returns a list in the format of [weeks, days, hours, minutes, seconds].
 # raises ValueError on error.
-def remindevery(cmdname: str, query: str) -> list:
+def remindevery(query: str, cmdname: str = "remindevery") -> list:
     if not query:
         raise ValueError(f"usage: {cmdname} <time>")
     args = query.split()
