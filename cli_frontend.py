@@ -51,28 +51,25 @@ def cmd_list():
         print("you don't have any active reminders right now.")
     else:
         for rem in reminders:
-            print(f"reminder with ID {rem['job_id']} -- will go off {rem['timestr']}, type: {rem['type']}")
+            print(f"reminder with ID {rem['job_id']} -- will go off {rem['timestr']}, type: {rem['type']}, message: '{rem['message']}'")
 
 # ----------------------------------------------------------------------------
 # the remove command, used to remove an active reminder
 # aliases: /r /rm /remove
-def cmd_remove(query: str, cmdname: str):
-    if not query:
-        print(f"usage: {cmdname} <reminder ID>")
-        return
-    if not query.isdigit():
+def cmd_remove(query: str):
+    if not query or not query.isdigit():
         print("error: invalid reminder ID")
-        return
-    remove_job_by_id(int(query))
+    else:
+        remove_job_by_id(int(query))
 
 # ----------------------------------------------------------------------------
 # the remindafter command
-# aliases: /ra /remind /remindafter
-def cmd_remindafter(query: str, cmdname: str):
+# aliases: /ra /remindin /remindafter
+def cmd_remindafter(query: str):
     try:
-        reminder_time = remind.remindafter(query, cmdname)
+        reminder_time = remind.remindafter(query)
     except ValueError as e:
-        print(e)
+        print(f"error: {e}")
         return
     reminder_msg = input("enter the reminder message: ")
     timestr = reminder_time.strftime("%c")
@@ -81,16 +78,17 @@ def cmd_remindafter(query: str, cmdname: str):
     reminders.append({"job": scheduler.add_job(do_remind, "date", args=[reminder_msg, job_id], run_date=reminder_time),
                       "job_id": job_id,
                       "type": "one-time",
-                      "timestr": f"at {timestr}"})
+                      "timestr": f"at {timestr}",
+                      "message": reminder_msg})
 
 # ----------------------------------------------------------------------------
 # the remindat command
-# aliases: /rt /remindat
-def cmd_remindat(query: str, cmdname: str):
+# aliases: /rt /remind /remindat
+def cmd_remindat(query: str):
     try:
-        reminder_time = remind.remindat(query, cmdname)
+        reminder_time = remind.remindat(query)
     except ValueError as e:
-        print(e)
+        print(f"error: {e}")
         return
     reminder_msg = input("enter the reminder message: ")
     timestr = reminder_time.strftime("%c")
@@ -100,7 +98,8 @@ def cmd_remindat(query: str, cmdname: str):
     reminders.append({"job": scheduler.add_job(do_remind, "date", args=[reminder_msg, job_id], run_date=reminder_time),
                       "job_id": job_id,
                       "type": "one-time",
-                      "timestr": f"at {timestr}"})
+                      "timestr": f"at {timestr}",
+                      "message": reminder_msg})
 
 # ----------------------------------------------------------------------------
 # the remindevery command
@@ -122,11 +121,11 @@ def intervalstr(interval: list) -> str:
         s += f"{interval[4]} seconds, "
     return s[:-2]
 
-def cmd_remindevery(query: str, cmdname: str):
+def cmd_remindevery(query: str):
     try:
-        iv = remind.remindevery(query, cmdname)
+        iv = remind.remindevery(query)
     except ValueError as e:
-        print(e)
+        print(f"error: {e}")
         return
     if not all(v == 0 for v in iv):
         reminder_msg = input("enter the reminder message: ")
@@ -136,7 +135,8 @@ def cmd_remindevery(query: str, cmdname: str):
         reminders.append({"job": scheduler.add_job(do_remind, "interval", args=[reminder_msg, -1], weeks=iv[0], days=iv[1], hours=iv[2], minutes=iv[3], seconds=iv[4]),
                           "job_id": job_id,
                           "type": "repeating",
-                          "timestr": f"every {ivstr}"})
+                          "timestr": f"every {ivstr}",
+                          "message": reminder_msg})
 
 # ----------------------------------------------------------------------------
 # the main function
@@ -148,16 +148,18 @@ def main():
             cmd = cmdstr.split(maxsplit=1)
             if len(cmd) == 0:
                 continue
+            elif cmd[0] == "/exit":
+                break
             elif cmd[0] in ["/l", "/ls", "/list"]:
                 cmd_list()
             elif cmd[0] in ["/r", "/rm", "/remove"]:
-                cmd_remove(cmd[1], cmd[0])
-            elif cmd[0] in ["/ra", "/remind", "/remindafter"]:
-                cmd_remindafter(cmd[1], cmd[0])
-            elif cmd[0] in ["/rt", "/remindat"]:
-                cmd_remindat(cmd[1], cmd[0])
+                cmd_remove(cmd[1])
+            elif cmd[0] in ["/ra", "/remindin", "/remindafter"]:
+                cmd_remindafter(cmd[1])
+            elif cmd[0] in ["/rt", "/remind", "/remindat"]:
+                cmd_remindat(cmd[1])
             elif cmd[0] in ["/re", "/remindevery"]:
-                cmd_remindevery(cmd[1], cmd[0])
+                cmd_remindevery(cmd[1])
             else:
                 print("error: unknown command")
     except (EOFError, KeyboardInterrupt):

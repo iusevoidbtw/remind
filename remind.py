@@ -56,23 +56,34 @@ def addinterval(interval: list, amount: int, unit: str) -> list:
 #
 # returns a datetime object at which the reminder should fire.
 # raises ValueError on error.
-def remindafter(query: str, cmdname: str = "remindafter") -> datetime:
+def remindafter(query: str) -> datetime:
     if not query:
-        raise ValueError(f"usage: {cmdname} <time>")
+        raise ValueError("bad query")
     args = query.split()
     now = datetime.now()
-    if len(args) < 1 or len(args) > 2:
-        raise ValueError(f"usage: {cmdname} <time>")
-    elif len(args) == 1 or (len(args) > 1 and args[1] not in TIME_UNITS):
-        if args[0][:-1].isdigit() and args[0][-1] in TIME_UNITS:
-            now = addtime(now, int(args[0][:-1]), args[0][-1])
+    if len(args) < 1:
+        raise ValueError("bad query")
+
+    i = 0
+    remaining = len(args)
+
+    while remaining > 0:
+        if remaining == 1 or (remaining > 1 and args[i + 1] not in TIME_UNITS):
+            if args[i][:-1].isdigit() and args[i][-1] in TIME_UNITS:
+                now = addtime(now, int(args[i][:-1]), args[i][-1])
+                remaining -= 1
+                i += 1
+            else:
+                raise ValueError("invalid time format")
+        elif remaining >= 2:
+            if args[i].isdigit() and args[i + 1] in TIME_UNITS:
+                now = addtime(now, int(args[i]), args[i + 1])
+                remaining -= 2
+                i += 2
+            else:
+                raise ValueError("invalid time format")
         else:
-            raise ValueError("error: invalid time format")
-    elif len(args) == 2:
-        if args[0].isdigit() and args[1] in TIME_UNITS:
-            now = addtime(now, int(args[0]), args[1])
-        else:
-            raise ValueError("error: invalid time format")
+            raise ValueError("invalid time format")
     return now
 
 # ----------------------------------------------------------------------------
@@ -109,12 +120,12 @@ def parsetime(time: list) -> list:
 #
 # returns a datetime object at which the reminder should fire.
 # raises ValueError on error.
-def remindat(query: str, cmdname: str = "remindat") -> datetime:
+def remindat(query: str) -> datetime:
     if not query:
-        raise ValueError(f"usage: {cmdname} <time>")
+        raise ValueError("bad query")
     args = query.split()
     if len(args) < 1 or len(args) > 2:
-        raise ValueError(f"usage: {cmdname} <time>")
+        raise ValueError("bad query")
     now = datetime.now()
     year, month, day = now.year, now.month, now.day
     hour, minute, second = now.hour, now.minute, now.second
@@ -128,7 +139,7 @@ def remindat(query: str, cmdname: str = "remindat") -> datetime:
             seentime = True
             hour, minute, second = parsetime(args[0].split(":"))
         else:
-            raise ValueError("error: invalid time format")
+            raise ValueError("invalid time format")
 
         if len(args) > 1:
             if not seendate and "/" in args[1] and ":" not in args[1]:
@@ -138,10 +149,9 @@ def remindat(query: str, cmdname: str = "remindat") -> datetime:
                 seentime = True
                 hour, minute, second = parsetime(args[1].split(":"))
             else:
-                raise ValueError("error: invalid time format")
+                raise ValueError("invalid time format")
     except ValueError:
-        # TODO: wtf is this
-        raise ValueError("error: invalid time format")
+        raise ValueError("invalid time format")
 
     now = datetime.now()
     if not seendate:
@@ -154,7 +164,7 @@ def remindat(query: str, cmdname: str = "remindat") -> datetime:
     timedelta = newtime - now;
     diff = (timedelta.days * 24 * 3600) + timedelta.seconds
     if diff < 0:
-        raise ValueError("error: date/time cannot be in the past")
+        raise ValueError("date/time cannot be in the past")
 
     return newtime
 
@@ -167,19 +177,31 @@ def remindat(query: str, cmdname: str = "remindat") -> datetime:
 # raises ValueError on error.
 def remindevery(query: str, cmdname: str = "remindevery") -> list:
     if not query:
-        raise ValueError(f"usage: {cmdname} <time>")
+        raise ValueError("bad query")
     args = query.split()
     interval = [0, 0, 0, 0, 0]
-    if len(args) < 1 or len(args) > 2:
-        raise ValueError(f"usage: {cmdname} <time>")
-    elif len(args) == 1 or (len(args) > 1 and args[1] not in TIME_UNITS):
-        if args[0][:-1].isdigit() and args[0][-1] in TIME_UNITS:
-            interval = addinterval(interval, int(args[0][:-1]), args[0][-1])
+    if len(args) < 1:
+        raise ValueError("bad query")
+
+    i = 0
+    remaining = len(args)
+
+    while remaining > 0:
+        if remaining == 1 or (remaining > 1 and args[i + 1] not in TIME_UNITS):
+            if args[i][:-1].isdigit() and args[i][-1] in TIME_UNITS:
+                interval = addinterval(interval, int(args[i][:-1]), args[i][-1])
+                remaining -= 1
+                i += 1
+            else:
+                raise ValueError("invalid time format")
+        elif remaining >= 2:
+            if args[i].isdigit() and args[i + 1] in TIME_UNITS:
+                interval = addinterval(interval, int(args[i + 1]), args[i + 1])
+                now = addtime(now, int(args[i]), args[i + 1])
+                remaining -= 2
+                i += 2
+            else:
+                raise ValueError("invalid time format")
         else:
-            raise ValueError("error: invalid time format")
-    elif len(args) == 2:
-        if args[0].isdigit() and args[1] in TIME_UNITS:
-            interval = addinterval(interval, int(args[0]), args[1])
-        else:
-            raise ValueError("error: invalid time format")
+            raise ValueError("invalid time format")
     return interval

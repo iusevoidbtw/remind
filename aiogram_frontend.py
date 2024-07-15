@@ -30,10 +30,24 @@ scheduler = AsyncIOScheduler()
 reminders = []
 job_ids = []
 
-# TODO: replace these global variables with a FSM
 waiting_for_prompt = False
 reminder_time = None
 reminder_interval = []
+
+# ----------------------------------------------------------------------------
+# basic commands like /start and /help
+@dp.message(CommandStart())
+async def cmd_start(message: types.Message):
+    await message.answer("use '/help' for available commands.")
+
+@dp.message(Command("help"))
+async def cmd_help(message: types.Message):
+    await message.answer("""available commands:
+    /list (aliases: /l /ls) -- list all currently active reminders
+    /remove <reminder ID> (aliases: /r /rm) -- remove an active reminder with the ID of <reminder ID>
+    /remindafter <time> (aliases: /ra /remindin) -- set a reminder that will activate once an amount of time specified by <time> passes
+    /remindat <datetime> (aliases: /rt /remind) -- set a reminder that will activate at the date and/or time specified by <datetime>
+    /remindevery <interval> (aliases: /re) -- set a reminder that will activate every time the amount of time specified by <interval> passes""")
 
 # ----------------------------------------------------------------------------
 # job management
@@ -72,7 +86,7 @@ async def cmd_list(message: types.Message, command: CommandObject):
     else:
         answer = ""
         for rem in reminders:
-            answer += f"reminder with ID {rem['job_id']} -- will go off {rem['timestr']}, type: {rem['type']}\n"
+            answer += f"reminder with ID {rem['job_id']} -- will go off {rem['timestr']}, type: {rem['type']}, message: '{rem['message']}'\n"
         await message.answer(answer[:-1]) # strip unneeded final newline
 
 # ----------------------------------------------------------------------------
@@ -80,42 +94,38 @@ async def cmd_list(message: types.Message, command: CommandObject):
 # aliases: /r /rm /remove
 @dp.message(Command(commands=["r", "rm", "remove"]))
 async def cmd_remove(message: types.Message, command: CommandObject):
-    if not command.args:
-        await message.answer(f"usage: {message.text.split()[0]} <reminder ID>")
-        return
-    if not command.args.isdigit():
+    if not command.args or not command.args.isdigit():
         await message.answer("error: invalid reminder ID")
-        return
-    remove_job_by_id(int(command.args))
+    else:
+        remove_job_by_id(int(command.args))
 
 # ----------------------------------------------------------------------------
 # the remindafter command
-# aliases: /ra /remind /remindafter
-@dp.message(Command(commands=["ra", "remind", "remindafter"]))
+# aliases: /ra /remindin /remindafter
+@dp.message(Command(commands=["ra", "remindin", "remindafter"]))
 async def cmd_remindafter(message: types.Message, command: CommandObject):
     global reminder_type, waiting_for_prompt
     try:
         global reminder_time
-        reminder_time = remind.remindafter(command.args, message.text.split()[0])
+        reminder_time = remind.remindafter(command.args)
     except ValueError as e:
-        await message.answer(e)
+        await message.answer(f"error: {e}")
         return
-    print("h")
     await message.answer("enter the reminder message: ")
     reminder_type = "one-time"
     waiting_for_prompt = True
 
 # ----------------------------------------------------------------------------
 # the remindat command
-# aliases: /rt /remindat
-@dp.message(Command(commands=["rt", "remindat"]))
+# aliases: /rt /remind /remindat
+@dp.message(Command(commands=["rt", "remind", "remindat"]))
 async def cmd_remindat(message: types.Message, command: CommandObject):
     global reminder_type, waiting_for_prompt
     try:
         global reminder_time
-        reminder_time = remind.remindat(command.args, message.text.split()[0])
+        reminder_time = remind.remindat(command.args)
     except ValueError as e:
-        await message.answer(e)
+        await message.answer(f"error: {e}")
         return
     await message.answer("enter the reminder message: ")
     reminder_type = "one-time"
@@ -144,9 +154,9 @@ def intervalstr(interval: list) -> str:
 @dp.message(Command(commands=["re", "remindevery"]))
 async def cmd_remindevery(message: types.Message, command: CommandObject):
     try:
-        iv = remind.remindevery(command.args, message.text.split()[0])
+        iv = remind.remindevery(command.args)
     except ValueError as e:
-        await message.answer(e)
+        await message.answer(f"error: {e}")
         return
     if not all(v == 0 for v in iv):
         global reminder_interval, reminder_type, waiting_for_prompt
@@ -170,7 +180,8 @@ async def reminder_prompt(message: types.Message):
             reminders.append({"job": scheduler.add_job(do_remind, "date", args=[message, job_id], run_date=reminder_time),
                               "job_id": job_id,
                               "type": "one-time",
-                              "timestr": f"at {timestr}"})
+                              "timestr": f"at {timestr}",
+                              "message": message.text})
         elif reminder_type == "repeating":
             iv = reminder_interval
             ivstr = intervalstr(iv)
@@ -179,7 +190,8 @@ async def reminder_prompt(message: types.Message):
             reminders.append({"job": scheduler.add_job(do_remind, "interval", args=[message, -1], weeks=iv[0], days=iv[1], hours=iv[2], minutes=iv[3], seconds=iv[4]),
                               "job_id": job_id,
                               "type": "repeating",
-                              "timestr": f"every {ivstr}"})
+                              "timestr": f"every {ivstr}",
+                              "message": message.text})
 
 # ----------------------------------------------------------------------------
 # the main function

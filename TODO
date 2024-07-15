@@ -1,4 +1,9 @@
-- parsing of multiple time units (e.g '5m 10 seconds')
+- use a finite-state-machine in the aiogram frontend for input instead of global variables checked in a message handler
 - buttons for aiogram frontend
 - make the API simpler, add a way to schedule reminders from the library without the user having to worry about it
 - make removing jobs cancel them
+
+==============================================================================
+done:
+
+- parsing of multiple time units (e.g '5m 10 seconds')
